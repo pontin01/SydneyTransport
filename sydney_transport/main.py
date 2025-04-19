@@ -29,9 +29,14 @@ def main(args):
     end_stop = stop_name_to_info(state, end_stop_name)
     state.end_id = end_stop.stop_id
 
-    new_paths = create_path(state, start_stop)
+    new_paths = create_path(state, start_stop, state.desired_time)
     for path in new_paths:
-        find_path_stops(state, path)
+        stops_along_new_path = find_path_stops(state, path)
+
+        for stop in stops_along_new_path:
+            stops_at_parent_station = find_all_stops_at_parent_station(state, stop)
+
+
 
 
 
@@ -71,7 +76,7 @@ def stop_name_to_info(state: SearchState, stop_name: str = None):
     return Stop(result[0], stop_name, result[1], result[2], result[3])
 
 
-def create_path(state: SearchState, stop: Stop):
+def create_path(state: SearchState, stop: Stop, desired_time):
     sql = f"""(SELECT T.TripID, RouteID, DirectionID, StopSequence, ArrivalTime
                 FROM StopTime ST INNER JOIN Trip T ON (ST.TripID = T.TripID)
                      INNER JOIN Service S ON (T.ServiceID = S.ServiceID)
@@ -95,7 +100,7 @@ def create_path(state: SearchState, stop: Stop):
 
     with connect(state.db_username, state.db_password) as sydtp_db:
         with sydtp_db.cursor() as cursor:
-            params = (stop.stop_id, state.desired_time, stop.stop_id, state.desired_time)
+            params = (stop.stop_id, desired_time, stop.stop_id, desired_time)
             cursor.execute(sql, params)
             result = cursor.fetchall()
 
@@ -114,6 +119,7 @@ def create_path(state: SearchState, stop: Stop):
         new_path_ls.append(new_path)
 
     return new_path_ls
+
 
 def find_path_stops(state: SearchState, path: Path):
     sql = """SELECT S.StopID, StopName, StopLat, StopLon, ParentStation,
@@ -134,6 +140,8 @@ def find_path_stops(state: SearchState, path: Path):
     print(result)
     print(f"{state.end_id = }")
 
+    new_stops_ls = []
+
     for stop_record in result:
         stop_id = stop_record[0]
         stop_name = stop_record[1]
@@ -146,16 +154,58 @@ def find_path_stops(state: SearchState, path: Path):
         temp_stop = Stop(stop_id, stop_name, stop_lat, stop_lon, parent_station)
         path.add_stop(temp_stop, stop_sequence, arrival_time)
         state.searched_paths[stop_id] = temp_stop
+        new_stops_ls.append(temp_stop)
 
         if stop_id == state.end_id:
+            path.print_stops()
             finish()
             break
 
     path.print_stops()
 
+    return new_stops_ls
+
+
+def find_all_stops_at_parent_station(state: SearchState, stop: Stop):
+    sql = """SELECT StopID, StopName, StopLat, StopLon, ParentStation
+    FROM Stop
+    WHERE ParentStation = %s
+          AND StopName != %s
+          AND StopCode IS NOT NULL;"""
+
+    with connect(state.db_username, state.db_password) as sydtp_db:
+        with sydtp_db.cursor() as cursor:
+            params = (stop.parent_station, stop.stop_name)
+            cursor.execute(sql, params)
+            result = cursor.fetchall()
+
+    new_stop_ls = []
+
+    for record in result:
+        stop_id = record[0]
+        stop_name = record[1]
+        stop_lat = record[2]
+        stop_lon = record[3]
+        parent_station = record[4]
+
+        new_stop = Stop(stop_id, stop_name, stop_lat, stop_lon, parent_station)
+        state.searched_stops[stop_id] = new_stop
+        new_stop_ls.append(new_stop)
+
+        print(str(stop_id) + "\t" + stop_name)
+
+        if stop_id == state.end_id:
+            finish()
+            break
+
+    return new_stop_ls
+
+
+
 
 def finish():
     print("Done!")
+    sys.exit(0)
 
 if __name__ == "__main__":
     main(sys.argv)
