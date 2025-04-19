@@ -13,6 +13,5 @@ class Path:
         self.stop_ids.append(stop.stop_id)
 
     def print_stops(self):
-        # for stop in self.stops:
-        #     print(stop.)
-        pass
+        for stop in self.stops:
+            print(str(stop[0]) + "\t" + stop[1].stop_id + "\t" + str(stop[2]) + "\t" + stop[1].stop_name)
