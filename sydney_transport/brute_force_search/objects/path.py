@@ -1,4 +1,4 @@
-from sydney_transport.objects.stop import Stop
+from sydney_transport.brute_force_search.objects.stop import Stop
 
 class Path:
     def __init__(self, trip_id, route_id, direction_id):
