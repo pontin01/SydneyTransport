@@ -38,7 +38,7 @@ def main(args):
             stops_at_parent_station = find_all_stops_at_parent_station(state, stop)
 
             for sibling_stop in stops_at_parent_station:
-                new_new_path = create_paths(state, sibling_stop, sibling_stop.)
+                new_new_path = create_paths(state, sibling_stop, sibling_stop.desired_time)
 
 
 
