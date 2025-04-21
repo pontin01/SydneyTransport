@@ -24,12 +24,13 @@ def main(args):
     start_stop = stop_name_to_info(state, start_stop_name)
     state.start_id = start_stop.stop_id
     state.searched_stops[start_stop.stop_id] = start_stop
+    state.route_information.append(start_stop.stop_name)
 
     # get end stop information
     end_stop = stop_name_to_info(state, end_stop_name)
     state.end_id = end_stop.stop_id
 
-    new_paths = create_path(state, start_stop, state.desired_time)
+    new_paths = create_paths(state, start_stop, state.desired_time)
     for path in new_paths:
         stops_along_new_path = find_path_stops(state, path)
 
@@ -76,7 +77,7 @@ def stop_name_to_info(state: SearchState, stop_name: str = None):
     return Stop(result[0], stop_name, result[1], result[2], result[3])
 
 
-def create_path(state: SearchState, stop: Stop, desired_time):
+def create_paths(state: SearchState, stop: Stop, desired_time):
     sql = f"""(SELECT T.TripID, RouteID, DirectionID, StopSequence, ArrivalTime
                 FROM StopTime ST INNER JOIN Trip T ON (ST.TripID = T.TripID)
                      INNER JOIN Service S ON (T.ServiceID = S.ServiceID)
@@ -157,8 +158,9 @@ def find_path_stops(state: SearchState, path: Path):
         new_stops_ls.append(temp_stop)
 
         if stop_id == state.end_id:
+            state.route_information.append(stop_name)
             path.print_stops()
-            finish()
+            finish(state)
             break
 
     path.print_stops()
@@ -195,7 +197,9 @@ def find_all_stops_at_parent_station(state: SearchState, stop: Stop):
         print(str(stop_id) + "\t" + stop_name)
 
         if stop_id == state.end_id:
-            finish()
+            state.route_information.append(stop.stop_name)
+            state.route_information.append(stop_name)
+            finish(state)
             break
 
     return new_stop_ls
@@ -203,8 +207,13 @@ def find_all_stops_at_parent_station(state: SearchState, stop: Stop):
 
 
 
-def finish():
-    print("Done!")
+def finish(state: SearchState):
+    print("\n\nDone!\n")
+    step_count = 1
+    for stop_name in state.route_information:
+        print(f"{step_count}. {stop_name}")
+        step_count += 1
+
     sys.exit(0)
 
 if __name__ == "__main__":

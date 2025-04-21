@@ -10,3 +10,4 @@ class SearchState:
 
         self.searched_stops = {}
         self.searched_paths = {}
+        self.route_information = []
