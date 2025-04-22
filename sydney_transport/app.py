@@ -65,6 +65,15 @@ class App:
     def search(self):
         self.discover_connecting_stops(self.state.start_stop)
 
+        while self.state.unvisited_stops is not []:
+            closest_stop = self.state.find_next_closest_stop()
+            self.state.unvisited_stops.remove(closest_stop)
+            self.discover_connecting_stops(closest_stop)
+
+        if self.state.unvisited_stops is []:
+            print("Done! (search)")
+            sys.exit(0)
+
     def discover_connecting_stops(self, stop: Stop):
         self.discover_sibling_stops(stop)
         self.discover_neighbouring_stops(stop)
@@ -107,6 +116,10 @@ class App:
             connection = self.state.add_connection(stop, sibling_stop)
             sibling_stop.prev_connection = connection
             self.state.add_unvisited_stop(sibling_stop)
+
+            # final stop encountered
+            if stop_id == self.state.end_stop.stop_id:
+                self.finish(sibling_stop)
 
 
     def discover_neighbouring_stops(self, stop: Stop):
@@ -163,6 +176,10 @@ class App:
             sibling_stop_with_trip.prev_connection = connection
             sibling_stops_with_trips.append(sibling_stop_with_trip)
 
+            # final stop encountered
+            if stop.stop_id == self.state.end_stop.stop_id:
+                self.finish(stop)
+
         return sibling_stops_with_trips
 
     def discover_next_stop_in_trip(self, stop: Stop):
@@ -176,11 +193,13 @@ class App:
         """
         params = (stop.trip_id, stop.stop_sequence)
 
-        result = database.query(sql, params, self.db_username, self.db_password)[0]
+        result = database.query(sql, params, self.db_username, self.db_password)
 
         # current stop is last stop
-        if result is None:
+        if result == [] or result is None:
             return
+        else:
+            result = result[0]
 
         new_stop = Stop(
             stop_id=result[0],
@@ -195,6 +214,21 @@ class App:
         connection = self.state.add_connection(stop, new_stop)
         new_stop.prev_connection = connection
         self.state.add_unvisited_stop(new_stop)
+
+        # final stop encountered
+        if new_stop.stop_id == self.state.end_stop.stop_id:
+            self.finish(new_stop)
+
+    def finish(self, stop: Stop):
+        print("Done!")
+
+        final_stop_order = stop.get_stop_order()
+        for temp_stop in final_stop_order:
+            print(temp_stop)
+            print("\n\n")
+
+        sys.exit(0)
+
 
 
 

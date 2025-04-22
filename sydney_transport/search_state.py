@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import timedelta
 
 from sydney_transport.stop import Stop
 from sydney_transport.connection import Connection
@@ -21,3 +22,17 @@ class SearchState:
         connection = Connection(start_stop, end_stop)
         self.connections.append(connection)
         return connection
+
+    def find_next_closest_stop(self):
+        closest_stop = None
+        closest_stop_length = timedelta(days=99)
+
+        for stop in self.unvisited_stops:
+            stop_length = stop.prev_connection.get_cumulative_weight()
+
+            if stop_length < closest_stop_length:
+                closest_stop = stop
+                closest_stop_length = stop_length
+
+        return closest_stop
+

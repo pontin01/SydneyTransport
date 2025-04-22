@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, time, timedelta
 from typing import Optional, TYPE_CHECKING
 
 import sydney_transport.database as database
@@ -16,7 +16,7 @@ class Stop:
         self.parent_station = parent_station
 
         self.trip_id = trip_id
-        self.arrival_time: datetime.time = self.set_arrival_time(arrival_time)
+        self.arrival_time: time = self.set_arrival_time(arrival_time)
         self.stop_sequence = stop_sequence
         self.prev_connection: Optional[Connection] = None
 
@@ -32,12 +32,14 @@ class Stop:
 
 
     @staticmethod
-    def set_arrival_time(arrival_time) -> datetime.time:
+    def set_arrival_time(arrival_time) -> Optional[time]:
         if arrival_time is None:
             return None
 
-        if type(arrival_time) == datetime.time:
+        if isinstance(arrival_time, time):
             return arrival_time
+        elif isinstance(arrival_time, timedelta):
+            return (datetime.min + arrival_time).time()
 
         return datetime.strptime(arrival_time, "%H:%M").time()
 
@@ -63,6 +65,11 @@ class Stop:
             stop_sequence=None
         )
 
+    def get_stop_order(self):
+        if self.prev_connection is None:
+            return [self]
+
+        return self.prev_connection.start_stop.get_stop_order() + [self]
 
 
 
