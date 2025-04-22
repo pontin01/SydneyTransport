@@ -2,8 +2,8 @@ from sydney_transport.binary_tree.node import Node
 from sydney_transport.stop import Stop
 
 class AvlTree:
-    def __init__(self, root: Node):
-        self.root = root
+    def __init__(self):
+        self.root = None
 
     def insert(self, stop: Stop, travel_time):
         # empty tree
@@ -20,7 +20,7 @@ class AvlTree:
                 new_node = Node(stop, travel_time)
                 curr_node.left = new_node
                 new_node.parent = curr_node
-                curr_node.height -= 1
+                curr_node.height += 1
                 final_node = new_node
                 break
             # insert right
@@ -28,7 +28,7 @@ class AvlTree:
                 new_node = Node(stop, travel_time)
                 curr_node.right = new_node
                 new_node.parent = curr_node
-                curr_node.height += 1
+                curr_node.height -= 1
                 final_node = new_node
                 break
             # insert in current node
@@ -39,12 +39,12 @@ class AvlTree:
 
             # traverse left branch
             if travel_time < curr_node.travel_time:
-                curr_node.height -= 1
+                curr_node.height += 1
                 curr_node = curr_node.left
                 continue
             # traverse right branch
             elif travel_time > curr_node.travel_time:
-                curr_node.height += 1
+                curr_node.height -= 1
                 curr_node = curr_node.right
                 continue
 
@@ -82,6 +82,8 @@ class AvlTree:
         y.parent = z.parent
         if y.parent is not None:
             y.parent.right = y
+        else:
+            self.root = y
 
         # set T1 to z
         y.left = z
@@ -100,6 +102,8 @@ class AvlTree:
         y.parent = z.parent
         if y.parent is not None:
             y.parent.left = y
+        else:
+            self.root = y
 
         # set T1 to z
         y.right = z
@@ -112,25 +116,6 @@ class AvlTree:
         return y
 
     def _left_right_rotation(self, z: Node) -> Node:
-        y = z.right
-        x = y.left
-
-        # switching x and z
-        x.parent = z.parent
-        if x.parent is not None:
-            x.parent.right = x
-
-        # connect y to x
-        y.parent = x
-        x.right = y
-
-        # connect z to x
-        z.parent = x
-        x.left = z
-
-        return x
-
-    def _right_left_rotation(self, z: Node) -> Node:
         y = z.left
         x = y.right
 
@@ -138,14 +123,41 @@ class AvlTree:
         x.parent = z.parent
         if x.parent is not None:
             x.parent.left = x
+        else:
+            self.root = x
 
         # connect y to x
         y.parent = x
         x.left = y
+        y.right = None
 
         # connect z to x
         z.parent = x
         x.right = z
+        z.left = None
+
+        return x
+
+    def _right_left_rotation(self, z: Node) -> Node:
+        y = z.right
+        x = y.left
+
+        # switching x and z
+        x.parent = z.parent
+        if x.parent is not None:
+            x.parent.right = x
+        else:
+            self.root = x
+
+        # connect y to x
+        y.parent = x
+        x.right = y
+        y.left = None
+
+        # connect z to x
+        z.parent = x
+        x.left = z
+        z.right = None
 
         return x
 
