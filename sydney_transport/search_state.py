@@ -3,11 +3,13 @@ from datetime import timedelta
 
 from sydney_transport.stop import Stop
 from sydney_transport.connection import Connection
+from sydney_transport.binary_tree.avl_tree import AvlTree
 
 class SearchState:
     def __init__(self):
         self.connections = []
-        self.unvisited_stops = []
+        self.unvisited_stops = AvlTree()
+        self.parent_station_exclusion_list = []
 
         self.start_stop: Optional[Stop] = None
         self.end_stop: Optional[Stop] = None
@@ -16,7 +18,7 @@ class SearchState:
         self.start_time = None
 
     def add_unvisited_stop(self, stop: Stop):
-        self.unvisited_stops.append(stop)
+        self.unvisited_stops.insert(stop, stop.cumulative_travel_time)
 
     def add_connection(self, start_stop: Stop, end_stop: Stop) -> Connection:
         connection = Connection(start_stop, end_stop)

@@ -72,12 +72,11 @@ class App:
 
         self.discover_connecting_stops(self.state.start_stop)
 
-        while self.state.unvisited_stops is not []:
-            closest_stop = self.state.find_next_closest_stop()
-            self.state.unvisited_stops.remove(closest_stop)
+        while self.state.unvisited_stops.root is not None:
+            closest_stop = self.state.unvisited_stops.get_shortest_stop()
             self.discover_connecting_stops(closest_stop)
 
-        if self.state.unvisited_stops is []:
+        if self.state.unvisited_stops.root is None:
             print("Done! (search)")
             sys.exit(0)
 
@@ -97,6 +96,11 @@ class App:
         # stop is the parent station
         if stop.parent_station is None:
             param_parent_station = stop.stop_id
+        # siblings have already been discovered
+        if param_parent_station in self.state.parent_station_exclusion_list:
+            return
+        else:
+            self.state.parent_station_exclusion_list.append(param_parent_station)
 
         params = (param_parent_station,)
 
@@ -122,6 +126,7 @@ class App:
             )
             connection = self.state.add_connection(stop, sibling_stop)
             sibling_stop.prev_connection = connection
+            sibling_stop.cumulative_travel_time = stop.cumulative_travel_time + timedelta(minutes=1)
             self.state.add_unvisited_stop(sibling_stop)
 
             # final stop encountered
@@ -181,6 +186,8 @@ class App:
             )
             connection = self.state.add_connection(stop, sibling_stop_with_trip)
             sibling_stop_with_trip.prev_connection = connection
+            sibling_stop_with_trip.cumulative_travel_time = stop.cumulative_travel_time + \
+                sibling_stop_with_trip.prev_connection.calculate_travel_time()
             sibling_stops_with_trips.append(sibling_stop_with_trip)
 
             # final stop encountered
@@ -219,6 +226,8 @@ class App:
         )
         connection = self.state.add_connection(stop, new_stop)
         new_stop.prev_connection = connection
+        new_stop.cumulative_travel_time = stop.cumulative_travel_time + \
+            new_stop.prev_connection.calculate_travel_time()
         self.state.add_unvisited_stop(new_stop)
 
         # final stop encountered

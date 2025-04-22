@@ -19,6 +19,7 @@ class Stop:
         self.arrival_time: time = self.set_arrival_time(arrival_time)
         self.stop_sequence = stop_sequence
         self.prev_connection: Optional[Connection] = None
+        self.cumulative_travel_time: Optional[timedelta] = None
 
     def __str__(self):
         return f"{self.stop_id}\t{self.stop_sequence}\t{self.arrival_time}\t{self.stop_name}"
@@ -54,7 +55,7 @@ class Stop:
 
         result = database.query(sql, params, db_connection)[0]
 
-        return Stop(
+        new_stop = Stop(
             stop_id=result[0],
             stop_name=stop_name,
             stop_lat=result[1],
@@ -64,6 +65,8 @@ class Stop:
             arrival_time=None,
             stop_sequence=None
         )
+        new_stop.cumulative_travel_time = timedelta(minutes=0)
+        return new_stop
 
     def get_stop_order(self):
         if self.prev_connection is None:
