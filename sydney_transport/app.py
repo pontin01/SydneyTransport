@@ -1,5 +1,7 @@
 import sys
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
+import time
+import pandas as pd
 
 from sydney_transport import database
 from sydney_transport.search_state import SearchState
@@ -25,7 +27,7 @@ def get_start_time():
     return datetime.strptime(start_time, "%H:%M").time()
 
 
-def add_time(time: time, difference: timedelta):
+def add_time(time: datetime.time, difference: timedelta):
     datetime_object = datetime.combine(datetime.today(), time)
     new_datetime = datetime_object + difference
     return new_datetime.time()
@@ -37,6 +39,8 @@ class App:
         self.db_password = ""
 
         self.state = SearchState()
+        self.db_connection = None
+        self.timer = None
 
     def setup(self):
         try:
@@ -53,16 +57,19 @@ class App:
             print("Exiting!")
             sys.exit(0)
 
+        self.db_connection = database.connect(self.db_username, self.db_password)
+
         # create start and end stop instances
         self.state.start_stop = Stop.stop_name_to_stop(start_stop_name,
-                                                       self.db_username,
-                                                       self.db_password)
+                                                       self.db_connection)
         self.state.start_stop.arrival_time = self.state.start_time
         self.state.end_stop = Stop.stop_name_to_stop(end_stop_name,
-                                                     self.db_username,
-                                                     self.db_password)
+                                                     self.db_connection)
+
 
     def search(self):
+        self.timer = time.perf_counter()
+
         self.discover_connecting_stops(self.state.start_stop)
 
         while self.state.unvisited_stops is not []:
@@ -93,7 +100,7 @@ class App:
 
         params = (param_parent_station,)
 
-        result = database.query(sql, params, self.db_username, self.db_password)
+        result = database.query(sql, params, self.db_connection)
 
         for record in result:
             stop_id = record[0]
@@ -157,7 +164,7 @@ class App:
         """
         params = (stop.stop_id, stop.arrival_time, stop.arrival_time)
 
-        result = database.query(sql, params, self.db_username, self.db_password)
+        result = database.query(sql, params, self.db_connection)
 
         sibling_stops_with_trips = []
 
@@ -184,16 +191,15 @@ class App:
 
     def discover_next_stop_in_trip(self, stop: Stop):
         sql = """
-            SELECT ST.StopID, S.StopName, S.StopLat, S.StopLon, S.ParentStation,
-                   ST.ArrivalTime, ST.StopSequence
-              FROM StopTime ST
-  	               INNER JOIN Stop S ON ST.StopID = S.StopID
-             WHERE ST.TripID = %s
-	               AND ST.StopSequence = %s + 1;
+            SELECT StopID, StopName, StopLat, StopLon, ParentStation,
+                   ArrivalTime, StopSequence
+              FROM StopInformation
+             WHERE TripID = %s
+                   AND StopSequence = %s + 1;
         """
         params = (stop.trip_id, stop.stop_sequence)
 
-        result = database.query(sql, params, self.db_username, self.db_password)
+        result = database.query(sql, params, self.db_connection)
 
         # current stop is last stop
         if result == [] or result is None:
@@ -220,13 +226,22 @@ class App:
             self.finish(new_stop)
 
     def finish(self, stop: Stop):
+        end_time = time.perf_counter()
+        total_time = end_time - self.timer
         print("Done!")
+        print(f"{total_time = }\n")
 
         final_stop_order = stop.get_stop_order()
+        data = []
         for temp_stop in final_stop_order:
-            print(temp_stop)
-            print("\n\n")
+            item = [temp_stop.stop_id, temp_stop.stop_sequence,
+                    temp_stop.arrival_time, temp_stop.stop_name]
+            data.append(item)
 
+        data_frame = pd.DataFrame(data, columns=["ID", "Sequence", "ArrivalTime", "Name"])
+        print(data_frame)
+
+        self.db_connection.close()
         sys.exit(0)
 
 

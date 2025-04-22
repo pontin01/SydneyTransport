@@ -21,9 +21,7 @@ class Stop:
         self.prev_connection: Optional[Connection] = None
 
     def __str__(self):
-        return f"({self.stop_id = }, {self.stop_name = }, {self.stop_lat = }, {self.stop_lon = }, " \
-              f"{self.parent_station = }, {self.trip_id = }, {self.arrival_time = }," \
-              f" {self.stop_sequence = })"
+        return f"{self.stop_id}\t{self.stop_sequence}\t{self.arrival_time}\t{self.stop_name}"
 
     def __repr__(self):
         return f"({self.stop_id = }, {self.stop_name = }, {self.stop_lat = }, {self.stop_lon = }, " \
@@ -40,11 +38,13 @@ class Stop:
             return arrival_time
         elif isinstance(arrival_time, timedelta):
             return (datetime.min + arrival_time).time()
+        elif isinstance(arrival_time, datetime):
+            return datetime.time(arrival_time)
 
         return datetime.strptime(arrival_time, "%H:%M").time()
 
     @staticmethod
-    def stop_name_to_stop(stop_name: str, db_username, db_password) -> 'Stop':
+    def stop_name_to_stop(stop_name: str, db_connection) -> 'Stop':
         sql = """
             SELECT StopID, StopLat, StopLon, ParentStation
               FROM Stop
@@ -52,7 +52,7 @@ class Stop:
         """
         params = (stop_name,)
 
-        result = database.query(sql, params, db_username, db_password)[0]
+        result = database.query(sql, params, db_connection)[0]
 
         return Stop(
             stop_id=result[0],
