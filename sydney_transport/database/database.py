@@ -10,7 +10,7 @@ def connect(username, password):
 
     return sydtp_db
 
-def query(sql, params, db_connection):
+def query(sql, params, db_connection) -> list[tuple]:
     with db_connection.cursor() as cursor:
         cursor.execute(sql, params)
         return cursor.fetchall()
