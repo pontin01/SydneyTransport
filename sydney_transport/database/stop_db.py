@@ -44,16 +44,16 @@ def get_trips_from_stop(stop_id, arrival_time, start_day, db_connection) -> list
 
     return query(sql, params, db_connection)
 
-def get_next_stop_in_trip(trip_id, stop_sequence, db_connection) -> list[tuple]:
+def get_all_following_stops_in_trip(trip_id, stop_sequence, db_connection) -> list[tuple]:
     """
-    Gets all information about the next stop within a Trip.
+    Gets all information about the next stops within a Trip.
     """
     sql = """
         SELECT StopID, StopName, StopLat, StopLon, ParentStation,
                ArrivalTime, StopSequence
           FROM StopInformation
          WHERE TripID = %s
-               AND StopSequence = %s + 1;
+               AND StopSequence > %s;
     """
     params = (trip_id, stop_sequence)
 

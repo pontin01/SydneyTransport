@@ -29,12 +29,12 @@ class AvlTree:
 
         return visited_nodes
 
-    def insert(self, stop: Stop, travel_duration: timedelta):
+    def insert(self, stop: Stop, cumulative_travel_time: timedelta):
         """
         Inserts a Stop into the AVL Tree, then recalculates the height and
         balance factors before rebalancing the AVL Tree.
         """
-        new_node = Node(stop, travel_duration)
+        new_node = Node(stop, cumulative_travel_time)
 
         # empty tree
         if self.root is None:
@@ -46,23 +46,23 @@ class AvlTree:
         # loop through nodes till a valid insertion location is found
         while True:
             # insert left
-            if travel_duration < curr_node.travel_duration and curr_node.left is None:
+            if cumulative_travel_time < curr_node.cumulative_travel_time and curr_node.left is None:
                 curr_node.left = new_node
                 break
             # insert right
-            if travel_duration > curr_node.travel_duration and curr_node.right is None:
+            if cumulative_travel_time > curr_node.cumulative_travel_time and curr_node.right is None:
                 curr_node.right = new_node
                 break
             # insert in current node
-            if travel_duration == curr_node.travel_duration:
+            if cumulative_travel_time == curr_node.cumulative_travel_time:
                 curr_node.stops.append(stop)
                 break
 
             # traverse left branch
-            if travel_duration < curr_node.travel_duration:
+            if cumulative_travel_time < curr_node.cumulative_travel_time:
                 curr_node = curr_node.left
             # traverse right branch
-            elif travel_duration > curr_node.travel_duration:
+            elif cumulative_travel_time > curr_node.cumulative_travel_time:
                 curr_node = curr_node.right
 
         self._check_avl_quality(allow_rotations=True)
@@ -137,7 +137,6 @@ class AvlTree:
             elif right_node.left:
                 return self._right_left_rotation(node)
 
-
     def _left_rotation(self, node: Node):
         """
         Performs a left rotation on the root of the unbalanced subbranch.
@@ -153,8 +152,6 @@ class AvlTree:
         right_child.left = node
 
         return right_child
-        # TODO: Double check if the avl_quality should be checked again after _check_avl_quality()
-        # self._check_avl_quality(right_child)
 
     def _right_rotation(self, node: Node):
         """
@@ -171,7 +168,6 @@ class AvlTree:
         left_child.right = node
 
         return left_child
-        # self._check_avl_quality(left_child)
 
     def _left_right_rotation(self, node: Node):
         """

@@ -8,7 +8,8 @@ class Node:
     A Node of the AVL Binary Tree which contains one or more Stops.
 
     Attributes:
-        travel_duration (...): Duration of travel from a searched Stop to some Stops in this Node.
+        cumulative_travel_time (...): Cumulative duration of travel from the first
+            stop to all stops in this Node.
         stops (list[Stop]): Stops that are stored in this Node.
 
         height (int): Maximum number of nodes along the longest path from this Node.
@@ -16,8 +17,8 @@ class Node:
         left (Node | None):
         right (Node | None):
     """
-    def __init__(self, stop: Stop, travel_duration: timedelta):
-        self.travel_duration = travel_duration
+    def __init__(self, stop: Stop, cumulative_travel_time: timedelta):
+        self.cumulative_travel_time = cumulative_travel_time
         self.stops: list[Stop] = [stop]
 
         self.height = 0

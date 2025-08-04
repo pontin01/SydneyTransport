@@ -1,0 +1,7 @@
+04/08/25    - Change the avl_tree to be sorted by cumulative_travel_time rather
+              than travel_duration. Following this, change the travel_duration
+              parameter in insert() (avl_tree.py) and Node() (node.py) to
+              cumulative_travel_time.
+            - Change next_stop_in_trip() (stop_db.py) to
+              get_all_following_stops_in_trip(). It now retrieves all following
+              stops rather than only the next stop.

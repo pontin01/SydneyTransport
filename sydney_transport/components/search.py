@@ -134,7 +134,7 @@ class Search:
             )
             sibling_stop.prev_connection = Connection(stop, sibling_stop)
             sibling_stop.cumulative_travel_time = stop.cumulative_travel_time + SIBLING_TRAVEL_DURATION
-            self.state.unvisited_stops.insert(sibling_stop, SIBLING_TRAVEL_DURATION)
+            self.state.unvisited_stops.insert(sibling_stop, sibling_stop.cumulative_travel_time)
 
             self.stops_searched += 1
 
@@ -201,47 +201,51 @@ class Search:
         """
         Discovers the next Stop within a Trip.
         """
-        result = stop_db.get_next_stop_in_trip(stop.trip_id, stop.stop_sequence,
-                                               self.db_connection)
+        result = stop_db.get_all_following_stops_in_trip(stop.trip_id, stop.stop_sequence,
+                                                         self.db_connection)
 
         # current stop is last stop
         if not result:
             return
 
-        result = result[0]
+        last_stop: Stop = stop
 
-        new_stop = Stop(
-            stop_id=result[0],
-            stop_name=result[1],
-            stop_lat=result[2],
-            stop_lon=result[3],
-            parent_station=result[4],
-            trip_id=stop.trip_id,
-            arrival_time=result[5],
-            stop_sequence=result[6]
-        )
+        # add all upcoming stops in trip
+        for record in result:
+            new_stop = Stop(
+                stop_id=record[0],
+                stop_name=record[1],
+                stop_lat=record[2],
+                stop_lon=record[3],
+                parent_station=record[4],
+                trip_id=stop.trip_id,
+                arrival_time=record[5],
+                stop_sequence=record[6]
+            )
 
-        # parent stop already explored
-        if new_stop.parent_station in self.state.parent_station_exclusion_list:
-            return
+            # parent stop already explored
+            if new_stop.parent_station in self.state.parent_station_exclusion_list:
+                return
 
-        # stop has already been discovered but not searched yet
-        if new_stop.stop_id in self.state.temporary_station_exclusion_list:
-            return
+            # stop has already been discovered but not searched yet
+            if new_stop.stop_id in self.state.temporary_station_exclusion_list:
+                return
 
-        # remove stop from being discovered again before it is searched
-        self.state.temporary_station_exclusion_list.append(new_stop.stop_id)
+            # remove stop from being discovered again before it is searched
+            self.state.temporary_station_exclusion_list.append(new_stop.stop_id)
 
-        new_stop.prev_connection = Connection(stop, new_stop)
-        new_stop.cumulative_travel_time = stop.cumulative_travel_time + \
-            new_stop.prev_connection.calculate_travel_time()
-        self.state.unvisited_stops.insert(new_stop, new_stop.prev_connection.calculate_travel_time())
+            new_stop.prev_connection = Connection(last_stop, new_stop)
+            new_stop.cumulative_travel_time = last_stop.cumulative_travel_time + \
+                new_stop.prev_connection.calculate_travel_time()
+            self.state.unvisited_stops.insert(new_stop, new_stop.cumulative_travel_time)
 
-        self.stops_searched += 1
+            self.stops_searched += 1
 
-        # final stop encountered
-        if new_stop.stop_id == self.state.end_stop.stop_id:
-            self._finish(new_stop)
+            # final stop encountered
+            if new_stop.stop_id == self.state.end_stop.stop_id:
+                self._finish(new_stop)
+
+            last_stop = new_stop
 
     def _finish(self, stop: Stop):
         """
