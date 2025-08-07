@@ -1,10 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time
 import sys
-import time
+import mysql.connector.errors
+
 
 from components.search import Search
-from components.stop import Stop
-from binary_tree.avl_tree import AvlTree
 
 def retrieve_user_settings() -> dict:
     """
@@ -54,8 +53,15 @@ def get_start_time() -> time:
     start_time = input("Start Time: ")
     return datetime.strptime(start_time, "%H:%M").time()
 
-def main():
-    # temp_test()
+def main(args: list):
+    print()
+
+    # check for verbose mode
+    verbose_mode = False
+    if len(args) > 1:
+        if args[1] == "-v":
+            verbose_mode = True
+            print("Verbose Mode On\n")
 
     search = Search()
 
@@ -67,37 +73,14 @@ def main():
         user_settings["start_stop_name"],
         user_settings["end_stop_name"],
         user_settings["start_day"],
-        user_settings["start_time"]
+        user_settings["start_time"],
+        verbose_mode
     )
+
     search.search()
 
-def temp_test():
-    avl = AvlTree()
-
-    # test_numbers = [19, 48, 22, 24, 25, 45, 30, 23, 28, 31]
-    test_numbers = [80, 67, 78, 25, 58, 21, 31, 14, 33, 96]
-
-    for num in test_numbers:
-        xtime = datetime.strptime("15:00", "%H:%M").time()
-
-        stop = Stop(
-            stop_id=str(num),
-            stop_name=f"{num}",
-            stop_lat=0.1,
-            stop_lon=0.1,
-            parent_station=str(num),
-            trip_id=str(num),
-            arrival_time=xtime,
-            stop_sequence=num
-        )
-        avl.insert(stop, timedelta(minutes=num))
-
-    inorder = avl.inorder_traversal(avl.root)
-
-    print(inorder)
-
-    sys.exit(0)
-
-
 if __name__ == '__main__':
-    main()
+    try:
+        main(sys.argv)
+    except KeyboardInterrupt or mysql.connector.errors.InternalError:
+        print("\n\nForce Exited.\n")

@@ -5,12 +5,20 @@ def get_sibling_stop_list(parent_station_id: str, db_connection) -> list[tuple]:
     Gets a list of sibling stops from the database.
     """
     sql = """
-        SELECT StopID, StopName, StopLat, StopLon, ParentStation
-          FROM Stop
-         WHERE ParentStation = %s
-               AND LocationType IS NULL;
+        (
+            SELECT StopID, StopName, StopLat, StopLon, ParentStation, LocationType
+              FROM Stop
+             WHERE ParentStation = %s
+                   AND LocationType IS NULL
+        )
+        UNION
+        (
+            SELECT StopID, StopName, StopLat, StopLon, ParentStation, LocationType
+              FROM Stop
+             WHERE StopID = %s
+        )
     """
-    params = (parent_station_id,)
+    params = (parent_station_id, parent_station_id)
 
     return query(sql, params, db_connection)
 
@@ -71,28 +79,3 @@ def get_stop_information_from_name(stop_name: str, db_connection) -> list[tuple]
     params = (stop_name,)
 
     return query(sql, params, db_connection)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

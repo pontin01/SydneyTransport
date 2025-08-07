@@ -5,3 +5,12 @@
             - Change next_stop_in_trip() (stop_db.py) to
               get_all_following_stops_in_trip(). It now retrieves all following
               stops rather than only the next stop.
+
+07/08/25    - Created Verbose mode. In this mode all Stop names are printed as
+              they are searched. A complete print out of all Stops in the final
+              connection is printed out. Verbose mode is triggered by the
+              command line argument "-v".
+            - Created final travel instructions which tell the user which stop
+              they should get to, at what time they should get there, what
+              Route they should take (e.g. bus/train line), and where to get
+              off.

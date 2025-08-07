@@ -18,6 +18,8 @@ class SearchState:
         start_time (time): The time the search is starting on.
     """
     def __init__(self):
+        self.verbose_mode = False
+
         self.unvisited_stops: AvlTree = AvlTree()
         self.parent_station_exclusion_list = []
         self.temporary_station_exclusion_list = []
