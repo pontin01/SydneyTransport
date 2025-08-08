@@ -1,0 +1,20 @@
+CREATE TABLE `Trip` (
+  `RouteID` varchar(50) DEFAULT NULL,
+  `ServiceID` varchar(50) DEFAULT NULL,
+  `TripID` varchar(255) NOT NULL,
+  `ShapeID` varchar(50) DEFAULT NULL,
+  `TripHeadsign` varchar(50) DEFAULT NULL,
+  `DirectionID` bit(1) DEFAULT NULL,
+  `BlockID` varchar(50) DEFAULT NULL,
+  `WheelchairAccessible` tinyint DEFAULT NULL,
+  `RouteDirection` varchar(255) DEFAULT NULL,
+  `TripNote` varchar(50) DEFAULT NULL,
+  `BikesAllowed` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`TripID`),
+  KEY `RouteID` (`RouteID`),
+  KEY `ShapeID` (`ShapeID`),
+  KEY `TripNote` (`TripNote`),
+  CONSTRAINT `Trip_ibfk_1` FOREIGN KEY (`RouteID`) REFERENCES `Route` (`RouteID`),
+  CONSTRAINT `Trip_ibfk_2` FOREIGN KEY (`ShapeID`) REFERENCES `Shape` (`ShapeID`),
+  CONSTRAINT `Trip_ibfk_3` FOREIGN KEY (`TripNote`) REFERENCES `Note` (`NoteID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

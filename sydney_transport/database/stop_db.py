@@ -79,3 +79,24 @@ def get_stop_information_from_name(stop_name: str, db_connection) -> list[tuple]
     params = (stop_name,)
 
     return query(sql, params, db_connection)
+
+def get_stop_name_from_typo(stop_name: str, db_connection) -> list[tuple]:
+    """
+    Gets StopNames that are most similar to a mistyped stop_name.
+    """
+    sql = """
+          SELECT StopName
+            FROM (
+                    SELECT StopName
+                      FROM Stop
+                     WHERE MATCH(StopName)
+                           AGAINST(%s)
+                           AND (LocationType IS NULL OR ParentStation IS NULL)
+                     LIMIT 60
+                 ) AS E
+        ORDER BY levenshtein(StopName, %s)
+           LIMIT 5;
+    """
+    params = (stop_name, stop_name)
+
+    return query(sql, params, db_connection)

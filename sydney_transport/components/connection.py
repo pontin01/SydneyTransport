@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+import datetime as dt
 import math
 
 from sydney_transport.components.stop import Stop
@@ -20,7 +20,7 @@ class Connection:
         self.travel_duration = self.calculate_travel_time()
         self.coordinate_distance = self.calculate_coordinate_distance()
 
-    def calculate_travel_time(self) -> timedelta:
+    def calculate_travel_time(self) -> dt.timedelta:
         """
         Calculates the difference between the start_stop arrival time and the
         end_stop arrival time.
@@ -28,8 +28,8 @@ class Connection:
         start_time = self.start_stop.arrival_time
         end_time = self.end_stop.arrival_time
 
-        start_datetime = datetime.combine(datetime.today(), start_time)
-        end_datetime = datetime.combine(datetime.today(), end_time)
+        start_datetime = dt.datetime.combine(dt.datetime.today(), start_time)
+        end_datetime = dt.datetime.combine(dt.datetime.today(), end_time)
 
         return end_datetime - start_datetime
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, time
+import datetime as dt
 import pandas
 import sys
 import time
@@ -6,6 +6,7 @@ import time
 from sydney_transport.components.search_state import SearchState
 from sydney_transport.components.stop import Stop
 from sydney_transport.components.connection import Connection
+from sydney_transport.components.search_utils import *
 
 from sydney_transport.database import database
 from sydney_transport.database import stop_db
@@ -48,15 +49,54 @@ class Search:
         self.state.start_time = start_time
 
         # create start and end stop instances
-        self.state.start_stop = Stop.stop_name_to_stop(start_stop_name,
-                                                       self.db_connection)
+        self.state.start_stop = self._set_search_stop(start_stop_name)
         self.state.start_stop.arrival_time = self.state.start_time
-        self.state.end_stop = Stop.stop_name_to_stop(end_stop_name,
-                                                     self.db_connection)
+        self.state.end_stop = self._set_search_stop(end_stop_name)
 
         # other settings
         if verbose_mode:
             self.state.verbose_mode = True
+
+    def _set_search_stop(self, stop_name: str):
+        """
+        Checks whether the entered stop_name is valid and prompts the user with
+        alternatives if it is not.
+        """
+        # replace Ave with Av
+        if "Ave" in stop_name:
+            stop_name = stop_name.replace("Ave", "Av")
+        # capitalise at
+        if "at" in stop_name:
+            stop_name = stop_name.replace("at", "At")
+        # capitalise before
+        if "before" in stop_name:
+            stop_name = stop_name.replace("before", "Before")
+
+
+        stop = Stop.stop_name_to_stop(stop_name, self.db_connection)
+
+        # prompt for alternative stop names
+        if stop is None:
+            result = stop_db.get_stop_name_from_typo(stop_name, self.db_connection)
+
+            print(f"\n{stop_name} was not found.")
+            print("Did you mean one of these? (press ENTER to skip)\n")
+
+            print("1. " + result[0][0])
+            print("2. " + result[1][0])
+            print("3. " + result[2][0])
+            print("4. " + result[3][0])
+            print("5. " + result[4][0])
+
+            answer = input("\n")
+
+            if answer == "":
+                print("\nExiting.\n")
+                sys.exit()
+
+            stop = Stop.stop_name_to_stop(result[int(answer)+1][0], self.db_connection)
+
+        return stop
 
     def search(self):
         """
@@ -109,7 +149,7 @@ class Search:
         ParentStationID.
         :param stop: Stop to be searched.
         """
-        SIBLING_TRAVEL_DURATION = timedelta(minutes=1)
+        SIBLING_TRAVEL_DURATION = dt.timedelta(minutes=1)
 
         param_parent_station = stop.parent_station or stop.stop_id
 
@@ -125,7 +165,7 @@ class Search:
         # add all sibling stops to unvisited_stops list
         for record in result:
             stop_id = record[0]
-            arrival_time = self._add_time(stop.arrival_time, SIBLING_TRAVEL_DURATION)
+            arrival_time = add_time(stop.arrival_time, SIBLING_TRAVEL_DURATION)
 
             # TODO: not sure why this is here
             # sibling is the same as start_stop
@@ -152,12 +192,6 @@ class Search:
             if stop_id == self.state.end_stop.stop_id:
                 self._finish(sibling_stop)
 
-    @staticmethod
-    def _add_time(arrival_time: time, difference: timedelta) -> time:
-        datetime_object = datetime.combine(datetime.today(), arrival_time)
-        new_datetime = datetime_object + difference
-        return new_datetime.time()
-
     def _discover_neighbouring_stops(self, stop: Stop):
         """
         Discovers all Stops that can be reached through one Trip, with the ArrivalTime
@@ -167,7 +201,6 @@ class Search:
         if stop.parent_station is None:
             return
 
-        # TODO: check why name is sibling_stops_with_trips
         sibling_stops_with_trips = self._discover_trips_from_stop(stop)
         for connecting_stop in sibling_stops_with_trips:
             self._discover_next_stop_in_trip(connecting_stop)
@@ -295,7 +328,7 @@ class Search:
 
             # start stop
             if i == 0:
-                arrival_time = self._coloured_text(current_stop.arrival_time, "FFDE21")
+                arrival_time = coloured_text(current_stop.arrival_time, "FFDE21")
                 print(f"\n\nStarting from {current_stop.stop_name} at {arrival_time}.\n")
                 continue
 
@@ -308,18 +341,18 @@ class Search:
                 result = trip_db.get_trip_info_after_search(current_stop.trip_id, self.db_connection)[0]
                 route_short_name, route_long_name, route_desc, hex_colour = result
 
-                current_trip_type = self._get_trip_type(route_desc, hex_colour)
+                current_trip_type = get_trip_type(route_desc, hex_colour)
 
-                route_short_name, route_long_name = self._clean_route_names(route_short_name,
+                route_short_name, route_long_name = clean_route_names(route_short_name,
                                                                             route_long_name,
                                                                             route_desc)
 
                 current_trip_info = (route_short_name, hex_colour)
                 current_trip_id = current_stop.trip_id
-                arrival_time = self._coloured_text(current_stop.arrival_time, "FFDE21")
+                arrival_time = coloured_text(current_stop.arrival_time, "FFDE21")
 
                 text = f"Go to {current_stop.stop_name} and get on the "
-                text += f"{self._coloured_text(route_short_name, hex_colour)} "
+                text += f"{coloured_text(route_short_name, hex_colour)} "
                 text += f"{current_trip_type} "
 
                 # exclude invalid RouteLongName values for Regional Trains and Coaches Network routes
@@ -347,9 +380,9 @@ class Search:
                         is_end_of_trip = True
 
                 if is_end_stop or is_end_of_trip:
-                    arrival_time = self._coloured_text(current_stop.arrival_time, "FFDE21")
+                    arrival_time = coloured_text(current_stop.arrival_time, "FFDE21")
 
-                    text = f"The {self._coloured_text(current_trip_info[0], current_trip_info[1])} "
+                    text = f"The {coloured_text(current_trip_info[0], current_trip_info[1])} "
                     text += f"will arrive at {current_stop.stop_name} at {arrival_time}. "
                     text += "Get off here.\n"
                     print(text)
@@ -358,79 +391,3 @@ class Search:
 
         self.db_connection.close()
         sys.exit(0)
-
-    @staticmethod
-    def _coloured_text(text, hex_code):
-        """
-        Converts the text into a coloured text in the colour of the hex_code.
-        """
-        r, g, b = tuple(int(hex_code[i:i+2], 16) for i in (0, 2, 4))
-        return f"\033[38;2;{r};{g};{b}m{text}\033[0m"
-
-    def _get_trip_type(self, route_desc: str, route_colour: str):
-        """
-        Takes the RouteDesc and RouteColour of a Trip and determines whether it is a
-        bus, train, ferry, metro, coach or light rail service.
-        """
-        if route_desc.lower().__contains__("bus") or route_desc in (
-                "New England North West Network",
-                "Central West and Orana Network",
-                "Newcastle and Hunter Network",
-                "North Coast Network",
-                "South East and Tablelands Network",
-                "Sydney and Surrounds Network",
-                "Riverina Murray Network"
-        ):
-            return "Bus"
-
-        if route_desc.lower().__contains__("trains") and route_colour != "732A82":
-            return "Train"
-
-        if route_desc.lower().__contains__("ferr"):
-            return "Ferry"
-
-        if route_desc.lower().__contains__("metro"):
-            return "Metro"
-
-        if route_desc.lower().__contains__("coach"):
-            return "Coach"
-
-        if route_desc.lower().__contains__("light rail"):
-            return "Light Rail"
-
-    def _clean_route_names(self, route_short_name: str, route_long_name: str,
-                           route_desc: str) -> tuple:
-        """
-        Clean the RouteShortName and RouteLongName to fit a standardised form.
-        """
-        # make bus route_short_names lower case
-        if route_desc.lower().__contains__("bus"):
-            route_short_name = route_short_name.lower()
-
-        # invalid RouteDesc
-        if route_short_name == route_long_name:
-            return route_short_name, None
-
-        # Zebra Bus for "School buses" RouteDesc
-        if route_desc == "School buses" and "Zebra Bus - " in route_long_name:
-            return route_short_name, route_long_name[12:]
-
-        # "Newcastle Ferries" RouteDesc
-        if route_desc == "Newcastle Ferries":
-            return route_short_name.upper(), route_long_name[5:],
-
-        # exclude first route_long_name word
-        if route_desc in (
-            "Sydney Ferries Network",
-            "Private ferry and fast ferry services",
-            "Sydney Light Rail Network",
-            "Parramatta Light Rail Network",
-            "Sydney Trains Network"
-        ):
-            return route_short_name, ' '.join(route_long_name.split()[1:])
-
-        # exclude first two route_long_name words
-        if route_desc == "Sydney Metro Network":
-            return route_short_name, ' '.join(route_long_name.split()[2:])
-
-        return route_short_name, route_long_name

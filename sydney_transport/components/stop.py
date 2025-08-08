@@ -1,4 +1,4 @@
-from datetime import time, timedelta, datetime
+import datetime as dt
 import sys
 from typing import Optional, TYPE_CHECKING
 
@@ -35,10 +35,10 @@ class Stop:
 
         # other information
         self.trip_id = trip_id
-        self.arrival_time: time = self.set_arrival_time(arrival_time)
+        self.arrival_time: dt.time = self.set_arrival_time(arrival_time)
         self.stop_sequence = stop_sequence
         self.prev_connection: Optional[Connection] = None
-        self.cumulative_travel_time: timedelta = timedelta(minutes=0)
+        self.cumulative_travel_time: dt.timedelta = dt.timedelta(minutes=0)
 
     def __repr__(self):
         return self.stop_name
@@ -47,29 +47,32 @@ class Stop:
         return self.stop_name
 
     @staticmethod
-    def set_arrival_time(arrival_time) -> Optional[time]:
+    def set_arrival_time(arrival_time) -> Optional[dt.time]:
         if arrival_time is None:
             return None
 
-        if isinstance(arrival_time, time):
+        if isinstance(arrival_time, dt.time):
             return arrival_time
-        elif isinstance(arrival_time, datetime):
+        elif isinstance(arrival_time, dt.datetime):
             return arrival_time.time()
-        elif isinstance(arrival_time, timedelta):
-            return (datetime.min + arrival_time).time()
+        elif isinstance(arrival_time, dt.timedelta):
+            return (dt.datetime.min + arrival_time).time()
 
-        if not isinstance(arrival_time, time):
+        if not isinstance(arrival_time, dt.time):
             print("Error: stop.py: set_arrival_time()")
             sys.exit(0)
 
         return arrival_time
 
     @staticmethod
-    def stop_name_to_stop(stop_name: str, db_connection) -> 'Stop':
+    def stop_name_to_stop(stop_name: str, db_connection):
         """
         Creates a Stop instance based on a stop_name.
         """
         result = stop_db.get_stop_information_from_name(stop_name, db_connection)
+
+        if not result:
+            return None
 
         new_stop = Stop(
             stop_id=result[0][0],
@@ -81,7 +84,7 @@ class Stop:
             arrival_time=None,
             stop_sequence=None
         )
-        new_stop.cumulative_travel_time = timedelta(minutes=0)
+        new_stop.cumulative_travel_time = dt.timedelta(minutes=0)
 
         return new_stop
 

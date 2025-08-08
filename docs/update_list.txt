@@ -14,3 +14,7 @@
               they should get to, at what time they should get there, what
               Route they should take (e.g. bus/train line), and where to get
               off.
+
+08/08/25    - Moved static functions in search.py to search_utils.py.
+            - Now checks for typos and suggests alternative StopNames if the
+              entered start and end StopName doesn't match any StopNames.

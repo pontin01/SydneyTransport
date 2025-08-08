@@ -16,10 +16,14 @@ def retrieve_user_settings() -> dict:
         # get database information
         user_settings["db_username"] = input("Database Username: ")
         user_settings["db_password"] = input("Database Password: ")
+        # user_settings["db_username"] = "root"
+        # user_settings["db_password"] = "SchonerLinux759"
 
         # get search settings
         user_settings["start_stop_name"] = input("Start Stop Name: ")
         user_settings["end_stop_name"] = input("End Stop Name: ")
+        # user_settings["start_stop_name"] = "central station"
+        # user_settings["end_stop_name"] = "Rocky Point Rd at Toyer Ave"
         user_settings["start_day"] = get_start_day()
         user_settings["start_time"] = get_start_time()
     except EOFError:
@@ -36,6 +40,7 @@ def get_start_day() -> str:
     # loop until valid day inputted
     while True:
         desired_day = input("Start Day: ")
+        # desired_day = "Monday"
 
         days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
                 "sunday"]
@@ -51,6 +56,7 @@ def get_start_time() -> time:
     Gets starting time for the search; converts inputted time into time object.
     """
     start_time = input("Start Time: ")
+    # start_time = "1:00"
     return datetime.strptime(start_time, "%H:%M").time()
 
 def main(args: list):
