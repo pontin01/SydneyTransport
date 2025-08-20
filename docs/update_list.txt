@@ -18,3 +18,16 @@
 08/08/25    - Moved static functions in search.py to search_utils.py.
             - Now checks for typos and suggests alternative StopNames if the
               entered start and end StopName doesn't match any StopNames.
+
+20/08/25    - Implemented a map of Sydney function which visually displays the
+              search then drawing a final line over the route from the start
+              stop to the end stop.
+            - Implemented more command line options. Now with -c OPTION, where
+              OPTION can be STATIC, TIME, or DISTANCE. STATIC will print all
+              exploration lines in red. TIME will print all lines in order of
+              when they were searched (thus being sorted by cumulative travel
+              time), starting from green (quickest) to red (slowest). DISTANCE
+              prints the colours based on the distance from the end stop with
+              green as the closest and red as the furthest. As well, -d was
+              created to switch from the A* search algorithm to Dijkstra's,
+              although this is not fully implemented yet.

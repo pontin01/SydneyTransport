@@ -12,6 +12,8 @@ from sydney_transport.database import database
 from sydney_transport.database import stop_db
 from sydney_transport.database import trip_db
 
+from sydney_transport.map.map import Map
+
 class Search:
     """
     Represents a search from a start Stop to an End stop.
@@ -35,7 +37,7 @@ class Search:
         self.stops_searched = 0
 
     def setup(self, db_username, db_password, start_stop_name, end_stop_name,
-              start_day, start_time, verbose_mode):
+              start_day, start_time, verbose_mode, search_mode, colour_mode):
         """
         Establishes the database connection and retrieves user search settings.
         """
@@ -54,8 +56,9 @@ class Search:
         self.state.end_stop = self._set_search_stop(end_stop_name)
 
         # other settings
-        if verbose_mode:
-            self.state.verbose_mode = True
+        self.state.verbose_mode = verbose_mode
+        self.state.search_mode = search_mode
+        self.state.colour_mode = colour_mode
 
     def _set_search_stop(self, stop_name: str):
         """
@@ -94,7 +97,7 @@ class Search:
                 print("\nExiting.\n")
                 sys.exit()
 
-            stop = Stop.stop_name_to_stop(result[int(answer)+1][0], self.db_connection)
+            stop = Stop.stop_name_to_stop(result[int(answer)][0], self.db_connection)
 
         return stop
 
@@ -119,7 +122,6 @@ class Search:
             if self.state.verbose_mode:
                 print(closest_stop.stop_name)
 
-            # TODO: check why this is here
             if closest_stop is None:
                 continue
 
@@ -185,6 +187,13 @@ class Search:
             sibling_stop.prev_connection = Connection(stop, sibling_stop)
             sibling_stop.cumulative_travel_time = stop.cumulative_travel_time + SIBLING_TRAVEL_DURATION
             self.state.unvisited_stops.insert(sibling_stop, sibling_stop.cumulative_travel_time)
+
+            self.state.coords_list.append([
+                sibling_stop.stop_lat,
+                sibling_stop.stop_lon,
+                time.perf_counter() - self.timer,
+                sibling_stop.trip_id,
+            ])
 
             self.stops_searched += 1
 
@@ -282,6 +291,13 @@ class Search:
                 new_stop.prev_connection.calculate_travel_time()
             self.state.unvisited_stops.insert(new_stop, new_stop.cumulative_travel_time)
 
+            self.state.coords_list.append([
+                new_stop.stop_lat,
+                new_stop.stop_lon,
+                time.perf_counter() - self.timer,
+                new_stop.trip_id
+            ])
+
             self.stops_searched += 1
 
             # final stop encountered
@@ -311,10 +327,13 @@ class Search:
         # print stop order for verbose mode
         if self.state.verbose_mode:
             print("\nVerbose Stop Order:\n")
+
             for temp_stop in final_stop_order:
                 item = [temp_stop.stop_id, temp_stop.trip_id, temp_stop.stop_sequence,
                         temp_stop.arrival_time, temp_stop.stop_name]
                 data.append(item)
+
+                self.state.end_coord_list.append([temp_stop.stop_lat, temp_stop.stop_lon])
 
             data_frame = pandas.DataFrame(data, columns=["StopID", "TripID", "Sequence", "ArrivalTime", "Name"])
             print(data_frame)
@@ -388,6 +407,22 @@ class Search:
                     print(text)
 
         print("You are now at your destination.\n")
+
+        print(f"{len(self.state.coords_list) = }")
+        with open("exploration_route_stops.txt", "w") as f:
+            last_timestamp = 0
+            for item in self.state.coords_list:
+                if item[3] != None:
+                    timestamp = item[2] - last_timestamp
+                    f.write(f"{item[0]}, {item[1]}, {timestamp}, {item[3]}\n")
+                    last_timestamp = item[2]
+
+        with open("optimal_route_stops.txt", "w") as f:
+            for item in self.state.end_coord_list:
+                f.write(f"{item[0]}, {item[1]}\n")
+
+        map = Map(self.state.colour_mode, self.state.start_stop, self.state.end_stop)
+        map.run()
 
         self.db_connection.close()
         sys.exit(0)

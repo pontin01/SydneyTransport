@@ -19,6 +19,8 @@ class SearchState:
     """
     def __init__(self):
         self.verbose_mode = False
+        self.search_mode = ""
+        self.colour_mode = ""
 
         self.unvisited_stops: AvlTree = AvlTree()
         self.parent_station_exclusion_list = []
@@ -29,3 +31,6 @@ class SearchState:
 
         self.start_day = ""
         self.start_time = None
+
+        self.coords_list = []
+        self.end_coord_list = []

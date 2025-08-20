@@ -96,26 +96,3 @@ class Stop:
             return [self]
 
         return self.prev_connection.start_stop.get_stop_order() + [self]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
