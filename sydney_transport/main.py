@@ -2,7 +2,6 @@ from datetime import datetime, time
 import sys
 import mysql.connector.errors
 
-
 from components.search import Search
 
 def retrieve_user_settings() -> dict:
@@ -16,14 +15,10 @@ def retrieve_user_settings() -> dict:
         # get database information
         user_settings["db_username"] = input("Database Username: ")
         user_settings["db_password"] = input("Database Password: ")
-        # user_settings["db_username"] = "root"
-        # user_settings["db_password"] = "SchonerLinux759"
 
         # get search settings
         user_settings["start_stop_name"] = input("Start Stop Name: ")
         user_settings["end_stop_name"] = input("End Stop Name: ")
-        # user_settings["start_stop_name"] = "central station"
-        # user_settings["end_stop_name"] = "Rocky Point Rd at Toyer Ave"
         user_settings["start_day"] = get_start_day()
         user_settings["start_time"] = get_start_time()
     except EOFError:
@@ -40,7 +35,6 @@ def get_start_day() -> str:
     # loop until valid day inputted
     while True:
         desired_day = input("Start Day: ")
-        # desired_day = "Monday"
 
         days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
                 "sunday"]
@@ -56,18 +50,47 @@ def get_start_time() -> time:
     Gets starting time for the search; converts inputted time into time object.
     """
     start_time = input("Start Time: ")
-    # start_time = "1:00"
     return datetime.strptime(start_time, "%H:%M").time()
+
+def extract_cmd_line_options(args: list) -> tuple[bool, str, str]:
+    verbose_mode = False
+    search_mode = "A*"
+    colour_mode = "STATIC"
+
+    if len(args) > 1:
+        # print help information
+        if "-h" in args or "--help" in args:
+            print("HELP")
+            sys.exit(0)
+        if "-v" in args:
+            verbose_mode = True
+            print("Verbose Mode On\n")
+        if "-d" in args:
+            search_mode = "DIJKSTRA"
+        if "-c" in args:
+            try:
+                colour_mode: str = args[args.index("-c") + 1].upper()
+
+                if colour_mode not in ("STATIC", "TIME", "DISTANCE"):
+                    raise ValueError
+
+            except (ValueError, IndexError):
+                print("You must enter a valid Colour Mode (STATIC, TIME, DISTANCE)\n")
+                sys.exit(0)
+
+    if verbose_mode:
+        print(f"Search Mode: {search_mode}")
+        print(f"Colour Mode: {colour_mode}\n\n")
+
+    return verbose_mode, search_mode, colour_mode
+
+
 
 def main(args: list):
     print()
 
-    # check for verbose mode
-    verbose_mode = False
-    if len(args) > 1:
-        if args[1] == "-v":
-            verbose_mode = True
-            print("Verbose Mode On\n")
+    # check command line options
+    verbose_mode, search_mode, colour_mode = extract_cmd_line_options(args)
 
     search = Search()
 
@@ -80,13 +103,19 @@ def main(args: list):
         user_settings["end_stop_name"],
         user_settings["start_day"],
         user_settings["start_time"],
-        verbose_mode
+        verbose_mode,
+        search_mode,
+        colour_mode
     )
 
     search.search()
 
+
+
 if __name__ == '__main__':
     try:
         main(sys.argv)
-    except KeyboardInterrupt or mysql.connector.errors.InternalError:
+    except KeyboardInterrupt:
+        print("\n\nForce Exited.\n")
+    except mysql.connector.errors.InternalError:
         print("\n\nForce Exited.\n")
