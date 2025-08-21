@@ -2,8 +2,7 @@ import pytest
 
 import datetime
 
-import sydney_transport.database.database as database
-import sydney_transport.database.stop_db as stop_db
+from sydney_transport.database import database, stop_db
 
 @pytest.fixture(scope="session", autouse=True)
 def db_connection():

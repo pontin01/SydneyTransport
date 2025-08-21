@@ -1,8 +1,8 @@
-from datetime import timedelta, datetime
+from datetime import timedelta
 import sys
 
-from sydney_transport.binary_tree.node import Node
-from sydney_transport.components.stop import Stop
+from sydney_transport.binary_tree import Node
+from sydney_transport.components import Stop
 
 class AvlTree:
     def __init__(self):
@@ -218,38 +218,3 @@ class AvlTree:
                 node_above_current.left = current_node.right
 
         return current_node.stops.pop(0)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

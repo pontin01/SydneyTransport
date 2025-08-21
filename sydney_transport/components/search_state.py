@@ -1,7 +1,7 @@
 from typing import Optional
 
-from sydney_transport.binary_tree.avl_tree import AvlTree
-from sydney_transport.components.stop import Stop
+from sydney_transport.binary_tree import AvlTree
+from sydney_transport.components import Stop
 
 class SearchState:
     """
@@ -18,19 +18,23 @@ class SearchState:
         start_time (time): The time the search is starting on.
     """
     def __init__(self):
+        # modes
         self.verbose_mode = False
         self.search_mode = ""
         self.colour_mode = ""
 
-        self.unvisited_stops: AvlTree = AvlTree()
-        self.parent_station_exclusion_list = []
-        self.temporary_station_exclusion_list = []
-
+        # search information
         self.start_stop: Optional[Stop] = None
         self.end_stop: Optional[Stop] = None
-
         self.start_day = ""
         self.start_time = None
 
+        # search tracking information
+        self.unvisited_stops: AvlTree = AvlTree()
+        self.parent_station_exclusion_list = []
+        self.temporary_station_exclusion_list = []
+        self.ideal_heuristic_cost = 1
+
+        # map drawing information
         self.coords_list = []
         self.end_coord_list = []

@@ -1,9 +1,8 @@
 import pytest
 from datetime import datetime, timedelta
 
-from sydney_transport.binary_tree.avl_tree import AvlTree
-from sydney_transport.binary_tree.node import Node
-from sydney_transport.components.stop import Stop
+from sydney_transport.binary_tree import AvlTree, Node
+from sydney_transport.components import Stop
 
 def create_test_stop_and_travel_time(num: int):
     """

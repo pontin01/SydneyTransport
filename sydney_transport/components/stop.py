@@ -2,10 +2,10 @@ import datetime as dt
 import sys
 from typing import Optional, TYPE_CHECKING
 
-import sydney_transport.database.stop_db as stop_db
+from sydney_transport.database import stop_db
 
 if TYPE_CHECKING:
-    from sydney_transport.components.connection import Connection
+    from sydney_transport.components import Connection
 
 class Stop:
     """

@@ -3,10 +3,9 @@ import os
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 import pygame
 
-from sydney_transport.map.exploration_routes import ExplorationRoutes
-from sydney_transport.map.optimal_route import OptimalRoute
+from sydney_transport.map import ExplorationRoutes, OptimalRoute
 
-from sydney_transport.components.stop import Stop
+from sydney_transport.components import Stop
 
 class Map:
     def __init__(self, colour_mode: str, start_stop: Stop, end_stop: Stop):

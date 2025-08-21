@@ -1,5 +1,5 @@
 import pygame
-from math import sqrt
+from math import sqrt, atan2
 
 Point = tuple[int, int]
 
@@ -98,3 +98,22 @@ def draw_line(surface: pygame.Surface, scale: float, colour: str,
         (end_x * scale, end_y * scale),
         width
     )
+
+def func(start: Point, end: Point, ideal_radians: float):
+    y1, x1 = start
+    y2, x2 = end
+    radians = atan2((y2 - y1), (x2 - x1))
+
+    # heuristic_distance = atan(total start to end start)
+
+    # return end.cum_time * abs(atan2(start to end) - heuristic_distance)
+
+    """
+    Algorithm will be like 
+    ideal = atan2((Ey - Sy), (Ex - Sx))
+    distance = sqrt((NPx - CPx)**2 + (NPy - CPy)**2)
+    direction = abs(ideal - atan2((NPy - CPy), (NPx - CPx)))
+    h(n) = time * distance * duration
+    cost = current_cum_cost + h(n)
+    """
+    pass

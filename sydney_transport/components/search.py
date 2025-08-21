@@ -1,18 +1,14 @@
-import datetime as dt
+from datetime import timedelta
 import pandas
 import sys
 import time
 
-from sydney_transport.components.search_state import SearchState
-from sydney_transport.components.stop import Stop
-from sydney_transport.components.connection import Connection
+from sydney_transport.components import SearchState, Stop, Connection
 from sydney_transport.components.search_utils import *
 
-from sydney_transport.database import database
-from sydney_transport.database import stop_db
-from sydney_transport.database import trip_db
+from sydney_transport.database import database, stop_db, trip_db
 
-from sydney_transport.map.map import Map
+from sydney_transport.map import Map
 
 class Search:
     """
@@ -55,7 +51,10 @@ class Search:
         self.state.start_stop.arrival_time = self.state.start_time
         self.state.end_stop = self._set_search_stop(end_stop_name)
 
-        # other settings
+        # A* search information
+        self.state.ideal_heuristic_cost = 0
+
+        # modes
         self.state.verbose_mode = verbose_mode
         self.state.search_mode = search_mode
         self.state.colour_mode = colour_mode
@@ -151,7 +150,7 @@ class Search:
         ParentStationID.
         :param stop: Stop to be searched.
         """
-        SIBLING_TRAVEL_DURATION = dt.timedelta(minutes=1)
+        SIBLING_TRAVEL_DURATION = timedelta(minutes=1)
 
         param_parent_station = stop.parent_station or stop.stop_id
 
