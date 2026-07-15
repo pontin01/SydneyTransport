@@ -5,7 +5,7 @@ import pygame
 
 from sydney_transport.map import ExplorationRoutes, OptimalRoute
 
-from sydney_transport.components import Stop
+from sydney_transport.search_components import Stop
 
 class Map:
     def __init__(self, colour_mode: str, start_stop: Stop, end_stop: Stop):

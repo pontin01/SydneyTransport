@@ -3,9 +3,10 @@ import sys
 from typing import Optional, TYPE_CHECKING
 
 from sydney_transport.database import stop_db
+from sydney_transport.search_components.search_utils import add_time
 
 if TYPE_CHECKING:
-    from sydney_transport.components import Connection
+    from sydney_transport.search_components import Connection
 
 class Stop:
     """
@@ -45,6 +46,15 @@ class Stop:
 
     def __str__(self):
         return self.stop_name
+
+    def get_stop_order(self):
+        """
+        Recursively creates a list of Stops from this Stop till the start_stop.
+        """
+        if self.prev_connection is None:
+            return [self]
+
+        return self.prev_connection.start_stop.get_stop_order() + [self]
 
     @staticmethod
     def set_arrival_time(arrival_time) -> Optional[dt.time]:
@@ -88,11 +98,70 @@ class Stop:
 
         return new_stop
 
-    def get_stop_order(self):
+    @staticmethod
+    def create_sibling_stop(record: tuple, stop: Stop) -> Stop:
         """
-        Recursively creates a list of Stops from this Stop till the start_stop.
+        Creates a sibling stop for the given Stop.
         """
-        if self.prev_connection is None:
-            return [self]
+        sibling_travel_duration = dt.timedelta(minutes=1)
+        arrival_time = add_time(stop.arrival_time, sibling_travel_duration)
 
-        return self.prev_connection.start_stop.get_stop_order() + [self]
+        # stop creation
+        sibling_stop = Stop(
+            stop_id=record[0],
+            stop_name=record[1],
+            stop_lat=record[2],
+            stop_lon=record[3],
+            parent_station=record[4],
+            trip_id=None,
+            arrival_time=arrival_time,
+            stop_sequence=None
+        )
+        sibling_stop.cumulative_travel_time = stop.cumulative_travel_time + sibling_travel_duration
+
+        # create connection
+        sibling_stop.prev_connection = Connection(stop, sibling_stop)
+
+        return sibling_stop
+
+    @staticmethod
+    def create_sibling_stop_with_trip(record: tuple, stop: Stop) -> Stop:
+        # stop creation
+        sibling_stop_with_trip = Stop(
+            stop_id=stop.stop_id,
+            stop_name=stop.stop_name,
+            stop_lat=stop.stop_lat,
+            stop_lon=stop.stop_lon,
+            parent_station=stop.parent_station,
+            trip_id=record[0],
+            arrival_time=record[1],
+            stop_sequence=record[2]
+        )
+
+        # create connection and calculate cumulative travel time
+        sibling_stop_with_trip.prev_connection = Connection(stop, sibling_stop_with_trip)
+        sibling_stop_with_trip.cumulative_travel_time = stop.cumulative_travel_time + \
+                                                        sibling_stop_with_trip.prev_connection.calculate_travel_time()
+
+        return sibling_stop_with_trip
+
+    @staticmethod
+    def create_next_stop_in_trip(record: tuple, last_stop: Stop) -> Stop:
+        # stop creation
+        new_stop = Stop(
+            stop_id=record[0],
+            stop_name=record[1],
+            stop_lat=record[2],
+            stop_lon=record[3],
+            parent_station=record[4],
+            trip_id=last_stop.trip_id,
+            arrival_time=record[5],
+            stop_sequence=record[6]
+        )
+
+        # create connection
+        new_stop.prev_connection = Connection(last_stop, new_stop)
+        new_stop.cumulative_travel_time = last_stop.cumulative_travel_time + \
+                                          new_stop.prev_connection.calculate_travel_time()
+
+        return new_stop

@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from sydney_transport.components import Stop
+    from sydney_transport.search_components import Stop
 
 class Node:
     """

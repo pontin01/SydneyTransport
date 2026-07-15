@@ -5,7 +5,7 @@ from typing import Optional, TYPE_CHECKING
 from sydney_transport.database import stop_db
 
 if TYPE_CHECKING:
-    from sydney_transport.components import Connection
+    from sydney_transport.search_components import Connection
 
 class Stop:
     """

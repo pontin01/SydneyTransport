@@ -3,9 +3,9 @@ import pandas
 import time
 import sys
 
-from sydney_transport.components import SearchState, Stop
-import sydney_transport.components.search_utils as su
-import sydney_transport.components.stop_creation as sc
+from sydney_transport.search_components import SearchState, Stop
+import sydney_transport.search_components.search_utils as su
+import sydney_transport.search_components.stop_creation as sc
 
 from sydney_transport.database import database, stop_db, trip_db
 
@@ -13,7 +13,7 @@ from sydney_transport.map import Map
 
 class Search:
     """
-    Represents a search from a start Stop to an End stop.
+    Performs a search from the start Stop to the end Stop.
 
     Attributes:
         db_username (str): Username for the Database.
@@ -75,8 +75,8 @@ class Search:
             print("\n\nSearched Station Order:\n")
 
         # main search loop
-        while self.state.unvisited_stops.root is not None:
-            closest_stop = self.state.unvisited_stops.remove_closest_stop()
+        while self.state.unvisited_stop_tree.root is not None:
+            closest_stop = self.state.unvisited_stop_tree.pop_closest_stop()
 
             if self.state.verbose_mode:
                 print(closest_stop.stop_name)
@@ -87,7 +87,7 @@ class Search:
             self._discover_connecting_stops(closest_stop)
 
         # search finished; unvisited_stops is empty
-        if self.state.unvisited_stops.root is None:
+        if self.state.unvisited_stop_tree.root is None:
             print("Done!")
             print("search.py: search() failed, unvisited_stops is empty")
             sys.exit(0)
@@ -130,7 +130,7 @@ class Search:
 
             # create and insert sibling stop into avl_tree
             sibling_stop = sc.create_sibling_stop(record, stop)
-            self.state.unvisited_stops.insert(sibling_stop, sibling_stop.cumulative_travel_time)
+            self.state.unvisited_stop_tree.insert(sibling_stop, sibling_stop.cumulative_travel_time)
 
             self.state.add_stop_to_coord_list(sibling_stop, self.timer)
 
@@ -205,7 +205,7 @@ class Search:
             # remove stop from being discovered again before it is searched
             self.state.temporary_station_exclusion_list.append(new_stop.stop_id)
 
-            self.state.unvisited_stops.insert(new_stop, new_stop.cumulative_travel_time)
+            self.state.unvisited_stop_tree.insert(new_stop, new_stop.cumulative_travel_time)
 
             self.state.add_stop_to_coord_list(new_stop, self.timer)
 

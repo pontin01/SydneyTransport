@@ -1,10 +1,12 @@
 import sys
 
-from utils import extract_cmd_line_options
+from sydney_transport.utils import retrieve_settings
+from sydney_transport.search_components.search2 import Search
 
 def main(args: list) -> None:
-    search_options = extract_cmd_line_options(args)
+    user_settings, search_settings = retrieve_settings(args)
 
+    search = Search()
 
 
 if __name__ == "__main__":

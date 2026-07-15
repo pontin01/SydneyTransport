@@ -2,11 +2,11 @@ from datetime import timedelta
 import sys
 
 from sydney_transport.binary_tree.node import Node
-from sydney_transport.components import Stop
+from sydney_transport.search_components import Stop
 
 class AvlTree:
     def __init__(self):
-        self.root = None
+        self._root = None
 
     def __str__(self):
         return f""
@@ -29,19 +29,20 @@ class AvlTree:
 
         return visited_nodes
 
-    def insert(self, stop: Stop, cumulative_travel_time: timedelta):
+    def insert(self, stop: Stop):
         """
         Inserts a Stop into the AVL Tree, then recalculates the height and
         balance factors before rebalancing the AVL Tree.
         """
+        cumulative_travel_time = stop.cumulative_travel_time
         new_node = Node(stop, cumulative_travel_time)
 
         # empty tree
-        if self.root is None:
-            self.root = new_node
+        if self._root is None:
+            self._root = new_node
             return
 
-        curr_node: Node = self.root
+        curr_node: Node = self._root
 
         # loop through nodes till a valid insertion location is found
         while True:
@@ -69,13 +70,13 @@ class AvlTree:
 
     def _check_avl_quality(self, allow_rotations: bool, node: Node = None) -> int:
         # tree is empty
-        if self.root is None:
+        if self._root is None:
             print("Error: avl_tree.py: tree is empty")
             sys.exit(0)
 
         # starting from root
         if node is None:
-            node = self.root
+            node = self._root
 
         # node is a leaf
         if node.left is None and node.right is None:
@@ -109,7 +110,7 @@ class AvlTree:
         node.balance_factor = left_height - right_height
 
         # root is unbalanced
-        if allow_rotations and self.root == node and node.balance_factor not in range(-1, 2):
+        if allow_rotations and self._root == node and node.balance_factor not in range(-1, 2):
             self._perform_rotation(node)
             self._check_avl_quality(allow_rotations=False)
 
@@ -145,8 +146,8 @@ class AvlTree:
         right_child = node.right
 
         # maintain root
-        if self.root == node:
-            self.root = right_child
+        if self._root == node:
+            self._root = right_child
 
         node.right = right_child.left
         right_child.left = node
@@ -161,8 +162,8 @@ class AvlTree:
         left_child = node.left
 
         # maintain root
-        if self.root == node:
-            self.root = left_child
+        if self._root == node:
+            self._root = left_child
 
         node.left = left_child.right
         left_child.right = node
@@ -185,18 +186,18 @@ class AvlTree:
         node.right = self._right_rotation(node.right)
         return self._left_rotation(node)
 
-    def remove_closest_stop(self):
+    def pop_closest_stop(self):
         """
-        Removes the closest Stop.
+        Pops the closest Stop from the AVL Tree.
         If the Stop is the last one in the Node it will remove the Node and
         rebalance the AVL Tree.
         """
         # tree is empty
-        if self.root is None:
+        if self._root is None:
             print("Error: avl_tree: remove_closest_stop(): tree is empty")
             sys.exit(0)
 
-        current_node: Node = self.root
+        current_node: Node = self._root
         node_above_current = None
 
         # traverse till furthest left node
@@ -207,14 +208,17 @@ class AvlTree:
         # remove node
         if len(current_node.stops) == 1:
             # deleting root node
-            if current_node == self.root:
-                self.root = None
+            if current_node == self._root:
+                self._root = None
 
                 # replacing root with right node
                 if current_node.right:
-                    self.root = current_node.right
+                    self._root = current_node.right
 
             elif node_above_current is not None:
                 node_above_current.left = current_node.right
 
         return current_node.stops.pop(0)
+
+    def is_empty(self) -> bool:
+        return self._root is None

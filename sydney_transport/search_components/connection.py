@@ -1,7 +1,7 @@
 import datetime as dt
 import math
 
-from sydney_transport.components import Stop
+from sydney_transport.search_components import Stop
 
 class Connection:
     """

@@ -1,6 +1,6 @@
 from sydney_transport.map.drawing_utils import *
 
-from sydney_transport.components import Stop
+from sydney_transport.search_components import Stop
 
 class ExplorationRoutes:
     def __init__(self, scale: float, colour_mode: str, start_stop: Stop, end_stop: Stop):

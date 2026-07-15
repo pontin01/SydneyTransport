@@ -2,7 +2,7 @@ from datetime import datetime, time
 import sys
 import mysql.connector.errors
 
-from components.search import Search
+from search_components.search import Search
 
 def retrieve_user_settings() -> dict:
     """

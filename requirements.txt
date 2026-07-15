@@ -1,5 +1,6 @@
 pip~=25.0.1
 mysql-connector-python~=9.2.0
 setuptools~=76.0.0
+pandas
 
 -e .
