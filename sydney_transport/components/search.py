@@ -1,10 +1,11 @@
 from datetime import timedelta
 import pandas
-import sys
 import time
+import sys
 
-from sydney_transport.components import SearchState, Stop, Connection
-from sydney_transport.components.search_utils import *
+from sydney_transport.components import SearchState, Stop
+import sydney_transport.components.search_utils as su
+import sydney_transport.components.stop_creation as sc
 
 from sydney_transport.database import database, stop_db, trip_db
 
@@ -47,9 +48,9 @@ class Search:
         self.state.start_time = start_time
 
         # create start and end stop instances
-        self.state.start_stop = self._set_search_stop(start_stop_name)
+        self.state.start_stop = su.set_search_stop(start_stop_name, self.db_connection)
         self.state.start_stop.arrival_time = self.state.start_time
-        self.state.end_stop = self._set_search_stop(end_stop_name)
+        self.state.end_stop = su.set_search_stop(end_stop_name, self.db_connection)
 
         # A* search information
         self.state.ideal_heuristic_cost = 0
@@ -58,47 +59,6 @@ class Search:
         self.state.verbose_mode = verbose_mode
         self.state.search_mode = search_mode
         self.state.colour_mode = colour_mode
-
-    def _set_search_stop(self, stop_name: str):
-        """
-        Checks whether the entered stop_name is valid and prompts the user with
-        alternatives if it is not.
-        """
-        # replace Ave with Av
-        if "Ave" in stop_name:
-            stop_name = stop_name.replace("Ave", "Av")
-        # capitalise at
-        if "at" in stop_name:
-            stop_name = stop_name.replace("at", "At")
-        # capitalise before
-        if "before" in stop_name:
-            stop_name = stop_name.replace("before", "Before")
-
-
-        stop = Stop.stop_name_to_stop(stop_name, self.db_connection)
-
-        # prompt for alternative stop names
-        if stop is None:
-            result = stop_db.get_stop_name_from_typo(stop_name, self.db_connection)
-
-            print(f"\n{stop_name} was not found.")
-            print("Did you mean one of these? (press ENTER to skip)\n")
-
-            print("1. " + result[0][0])
-            print("2. " + result[1][0])
-            print("3. " + result[2][0])
-            print("4. " + result[3][0])
-            print("5. " + result[4][0])
-
-            answer = input("\n")
-
-            if answer == "":
-                print("\nExiting.\n")
-                sys.exit()
-
-            stop = Stop.stop_name_to_stop(result[int(answer)][0], self.db_connection)
-
-        return stop
 
     def search(self):
         """
@@ -114,7 +74,7 @@ class Search:
         if self.state.verbose_mode:
             print("\n\nSearched Station Order:\n")
 
-        # loop through searching stops till end stop is reached
+        # main search loop
         while self.state.unvisited_stops.root is not None:
             closest_stop = self.state.unvisited_stops.remove_closest_stop()
 
@@ -150,8 +110,6 @@ class Search:
         ParentStationID.
         :param stop: Stop to be searched.
         """
-        SIBLING_TRAVEL_DURATION = timedelta(minutes=1)
-
         param_parent_station = stop.parent_station or stop.stop_id
 
         # siblings stops have already been discovered
@@ -165,39 +123,21 @@ class Search:
 
         # add all sibling stops to unvisited_stops list
         for record in result:
-            stop_id = record[0]
-            arrival_time = add_time(stop.arrival_time, SIBLING_TRAVEL_DURATION)
-
-            # TODO: not sure why this is here
+            # TODO: check why this is here
             # sibling is the same as start_stop
-            if stop_id == self.state.start_stop.stop_id:
-                arrival_time = stop.arrival_time
+            # if stop_id == self.state.start_stop.stop_id:
+            #     arrival_time = stop.arrival_time
 
-            sibling_stop = Stop(
-                stop_id=stop_id,
-                stop_name=record[1],
-                stop_lat=record[2],
-                stop_lon=record[3],
-                parent_station=record[4],
-                trip_id=None,
-                arrival_time=arrival_time,
-                stop_sequence=None
-            )
-            sibling_stop.prev_connection = Connection(stop, sibling_stop)
-            sibling_stop.cumulative_travel_time = stop.cumulative_travel_time + SIBLING_TRAVEL_DURATION
+            # create and insert sibling stop into avl_tree
+            sibling_stop = sc.create_sibling_stop(record, stop)
             self.state.unvisited_stops.insert(sibling_stop, sibling_stop.cumulative_travel_time)
 
-            self.state.coords_list.append([
-                sibling_stop.stop_lat,
-                sibling_stop.stop_lon,
-                time.perf_counter() - self.timer,
-                sibling_stop.trip_id,
-            ])
+            self.state.add_stop_to_coord_list(sibling_stop, self.timer)
 
             self.stops_searched += 1
 
             # final stop encountered
-            if stop_id == self.state.end_stop.stop_id:
+            if record[0] == self.state.end_stop.stop_id:
                 self._finish(sibling_stop)
 
     def _discover_neighbouring_stops(self, stop: Stop):
@@ -225,20 +165,7 @@ class Search:
         sibling_stops_with_trips = []
 
         for record in result:
-            sibling_stop_with_trip = Stop(
-                stop_id=stop.stop_id,
-                stop_name=stop.stop_name,
-                stop_lat=stop.stop_lat,
-                stop_lon=stop.stop_lon,
-                parent_station=stop.parent_station,
-                trip_id=record[0],
-                arrival_time=record[1],
-                stop_sequence=record[2]
-            )
-
-            sibling_stop_with_trip.prev_connection = Connection(stop, sibling_stop_with_trip)
-            sibling_stop_with_trip.cumulative_travel_time = stop.cumulative_travel_time + \
-                sibling_stop_with_trip.prev_connection.calculate_travel_time()
+            sibling_stop_with_trip = sc.create_sibling_stop_with_trip(record, stop)
 
             sibling_stops_with_trips.append(sibling_stop_with_trip)
 
@@ -263,39 +190,24 @@ class Search:
 
         # add all upcoming stops in trip
         for record in result:
-            new_stop = Stop(
-                stop_id=record[0],
-                stop_name=record[1],
-                stop_lat=record[2],
-                stop_lon=record[3],
-                parent_station=record[4],
-                trip_id=stop.trip_id,
-                arrival_time=record[5],
-                stop_sequence=record[6]
-            )
+            parent_station = record[4]
+            stop_id = record[0]
 
             # parent stop already explored
-            if new_stop.parent_station in self.state.parent_station_exclusion_list:
+            if parent_station in self.state.parent_station_exclusion_list:
+                return
+            # stop has already been discovered but not searched yet
+            if stop_id in self.state.temporary_station_exclusion_list:
                 return
 
-            # stop has already been discovered but not searched yet
-            if new_stop.stop_id in self.state.temporary_station_exclusion_list:
-                return
+            new_stop = sc.create_next_stop_in_trip(record, last_stop)
 
             # remove stop from being discovered again before it is searched
             self.state.temporary_station_exclusion_list.append(new_stop.stop_id)
 
-            new_stop.prev_connection = Connection(last_stop, new_stop)
-            new_stop.cumulative_travel_time = last_stop.cumulative_travel_time + \
-                new_stop.prev_connection.calculate_travel_time()
             self.state.unvisited_stops.insert(new_stop, new_stop.cumulative_travel_time)
 
-            self.state.coords_list.append([
-                new_stop.stop_lat,
-                new_stop.stop_lon,
-                time.perf_counter() - self.timer,
-                new_stop.trip_id
-            ])
+            self.state.add_stop_to_coord_list(new_stop, self.timer)
 
             self.stops_searched += 1
 
@@ -339,73 +251,7 @@ class Search:
             print()
 
         # loop through all stops in final_stop_order
-        current_trip_id = ""
-        current_trip_info = ()
-        for i in range(len(final_stop_order)):
-            current_stop = final_stop_order[i]
-
-            # start stop
-            if i == 0:
-                arrival_time = coloured_text(current_stop.arrival_time, "FFDE21")
-                print(f"\n\nStarting from {current_stop.stop_name} at {arrival_time}.\n")
-                continue
-
-            # current_stop is sibling without a trip, should be skipped
-            if current_stop.stop_sequence is None and current_stop.trip_id is None:
-                continue
-
-            # current_stop is the start of a trip
-            if current_stop.stop_id == final_stop_order[i-1].stop_id:
-                result = trip_db.get_trip_info_after_search(current_stop.trip_id, self.db_connection)[0]
-                route_short_name, route_long_name, route_desc, hex_colour = result
-
-                current_trip_type = get_trip_type(route_desc, hex_colour)
-
-                route_short_name, route_long_name = clean_route_names(route_short_name,
-                                                                            route_long_name,
-                                                                            route_desc)
-
-                current_trip_info = (route_short_name, hex_colour)
-                current_trip_id = current_stop.trip_id
-                arrival_time = coloured_text(current_stop.arrival_time, "FFDE21")
-
-                text = f"Go to {current_stop.stop_name} and get on the "
-                text += f"{coloured_text(route_short_name, hex_colour)} "
-                text += f"{current_trip_type} "
-
-                # exclude invalid RouteLongName values for Regional Trains and Coaches Network routes
-                if route_long_name is not None:
-                    text += f"({route_long_name}) "
-
-                text += f"arriving at {arrival_time}."
-                print(text)
-
-                continue
-
-            # current_stop is in a trip, but not the start or end
-            if current_stop != final_stop_order[-1]:
-                if current_stop.trip_id == current_trip_id and \
-                        final_stop_order[i+1].trip_id == current_trip_id:
-                    continue
-
-            # current_stop is the end of a trip (or end stop)
-            if current_stop.trip_id is not None:
-                is_end_stop = len(final_stop_order) - 1 == i
-                is_end_of_trip = False
-
-                if not is_end_stop:
-                    if final_stop_order[i+1].trip_id != current_stop.trip_id:
-                        is_end_of_trip = True
-
-                if is_end_stop or is_end_of_trip:
-                    arrival_time = coloured_text(current_stop.arrival_time, "FFDE21")
-
-                    text = f"The {coloured_text(current_trip_info[0], current_trip_info[1])} "
-                    text += f"will arrive at {current_stop.stop_name} at {arrival_time}. "
-                    text += "Get off here.\n"
-                    print(text)
-
-        print("You are now at your destination.\n")
+        self._print_route_directions(final_stop_order)
 
         print(f"{len(self.state.coords_list) = }")
         with open("exploration_route_stops.txt", "w") as f:
@@ -425,3 +271,72 @@ class Search:
 
         self.db_connection.close()
         sys.exit(0)
+
+    def _print_route_directions(self, final_stop_order: list):
+        current_trip_id = ""
+        current_trip_info = ()
+        for i in range(len(final_stop_order)):
+            current_stop = final_stop_order[i]
+
+            # start stop
+            if i == 0:
+                arrival_time = su.coloured_text(current_stop.arrival_time, "FFDE21")
+                print(f"\n\nStarting from {current_stop.stop_name} at {arrival_time}.\n")
+                continue
+
+            # current_stop is sibling without a trip, should be skipped
+            if current_stop.stop_sequence is None and current_stop.trip_id is None:
+                continue
+
+            # current_stop is the start of a trip
+            if current_stop.stop_id == final_stop_order[i - 1].stop_id:
+                result = trip_db.get_trip_info_after_search(current_stop.trip_id, self.db_connection)[0]
+                route_short_name, route_long_name, route_desc, hex_colour = result
+
+                current_trip_type = su.get_trip_type(route_desc, hex_colour)
+
+                route_short_name, route_long_name = su.clean_route_names(route_short_name,
+                                                                         route_long_name,
+                                                                         route_desc)
+
+                current_trip_info = (route_short_name, hex_colour)
+                current_trip_id = current_stop.trip_id
+                arrival_time = su.coloured_text(current_stop.arrival_time, "FFDE21")
+
+                text = f"Go to {current_stop.stop_name} and get on the "
+                text += f"{su.coloured_text(route_short_name, hex_colour)} "
+                text += f"{current_trip_type} "
+
+                # exclude invalid RouteLongName values for Regional Trains and Coaches Network routes
+                if route_long_name is not None:
+                    text += f"({route_long_name}) "
+
+                text += f"arriving at {arrival_time}."
+                print(text)
+
+                continue
+
+            # current_stop is in a trip, but not the start or end
+            if current_stop != final_stop_order[-1]:
+                if current_stop.trip_id == current_trip_id and \
+                        final_stop_order[i + 1].trip_id == current_trip_id:
+                    continue
+
+            # current_stop is the end of a trip (or end stop)
+            if current_stop.trip_id is not None:
+                is_end_stop = len(final_stop_order) - 1 == i
+                is_end_of_trip = False
+
+                if not is_end_stop:
+                    if final_stop_order[i + 1].trip_id != current_stop.trip_id:
+                        is_end_of_trip = True
+
+                if is_end_stop or is_end_of_trip:
+                    arrival_time = su.coloured_text(current_stop.arrival_time, "FFDE21")
+
+                    text = f"The {su.coloured_text(current_trip_info[0], current_trip_info[1])} "
+                    text += f"will arrive at {current_stop.stop_name} at {arrival_time}. "
+                    text += "Get off here.\n"
+                    print(text)
+
+        print("You are now at your destination.\n")

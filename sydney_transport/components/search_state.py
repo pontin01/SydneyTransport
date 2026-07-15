@@ -1,6 +1,7 @@
+import time
 from typing import Optional
 
-from sydney_transport.binary_tree import AvlTree
+from sydney_transport.binary_tree.avl_tree import AvlTree
 from sydney_transport.components import Stop
 
 class SearchState:
@@ -38,3 +39,11 @@ class SearchState:
         # map drawing information
         self.coords_list = []
         self.end_coord_list = []
+
+    def add_stop_to_coord_list(self, stop: Stop, timer):
+        self.coords_list.append([
+            stop.stop_lat,
+            stop.stop_lon,
+            time.perf_counter() - timer,
+            stop.trip_id,
+        ])

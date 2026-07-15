@@ -25,7 +25,7 @@ class Stop:
         cumulative_travel_time (Connection): Travel time from start_stop to this Stop.
     """
     def __init__(self, stop_id, stop_name, stop_lat, stop_lon, parent_station,
-                 trip_id, arrival_time, stop_sequence):
+                 trip_id=None, arrival_time=None, stop_sequence=None):
         # basic stop information
         self.stop_id = stop_id
         self.stop_name = stop_name

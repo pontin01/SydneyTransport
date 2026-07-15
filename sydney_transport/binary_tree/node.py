@@ -1,7 +1,8 @@
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from sydney_transport.components import Stop
+if TYPE_CHECKING:
+    from sydney_transport.components import Stop
 
 class Node:
     """
@@ -18,7 +19,7 @@ class Node:
         left (Node | None):
         right (Node | None):
     """
-    def __init__(self, stop: Stop, cumulative_travel_time: timedelta):
+    def __init__(self, stop, cumulative_travel_time: timedelta):
         self.cumulative_travel_time = cumulative_travel_time
         self.stops: list[Stop] = [stop]
 

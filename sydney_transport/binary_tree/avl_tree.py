@@ -1,7 +1,7 @@
 from datetime import timedelta
 import sys
 
-from sydney_transport.binary_tree import Node
+from sydney_transport.binary_tree.node import Node
 from sydney_transport.components import Stop
 
 class AvlTree:

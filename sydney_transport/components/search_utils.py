@@ -1,4 +1,8 @@
 import datetime as dt
+import sys
+
+from sydney_transport.components import Stop
+from sydney_transport.database import stop_db
 
 def add_time(arrival_time: dt.time, difference: dt.timedelta) -> dt.time:
     datetime_object = dt.datetime.combine(dt.datetime.today(), arrival_time)
@@ -42,6 +46,47 @@ def get_trip_type(route_desc: str, route_colour: str):
 
     if route_desc.lower().__contains__("light rail"):
         return "Light Rail"
+
+def set_search_stop(stop_name: str, db_connection):
+    """
+    Checks whether the entered stop_name is valid and prompts the user with
+    alternatives if it is not.
+    """
+    # replace Ave with Av
+    if "Ave" in stop_name:
+        stop_name = stop_name.replace("Ave", "Av")
+    # capitalise at
+    if "at" in stop_name:
+        stop_name = stop_name.replace("at", "At")
+    # capitalise before
+    if "before" in stop_name:
+        stop_name = stop_name.replace("before", "Before")
+
+
+    stop = Stop.stop_name_to_stop(stop_name, db_connection)
+
+    # prompt for alternative stop names
+    if stop is None:
+        result = stop_db.get_stop_name_from_typo(stop_name, db_connection)
+
+        print(f"\n{stop_name} was not found.")
+        print("Did you mean one of these? (press ENTER to skip)\n")
+
+        print("1. " + result[0][0])
+        print("2. " + result[1][0])
+        print("3. " + result[2][0])
+        print("4. " + result[3][0])
+        print("5. " + result[4][0])
+
+        answer = input("\n")
+
+        if answer == "":
+            print("\nExiting.\n")
+            sys.exit()
+
+        stop = Stop.stop_name_to_stop(result[int(answer)][0], db_connection)
+
+    return stop
 
 def clean_route_names(route_short_name: str, route_long_name: str, route_desc: str) -> tuple:
     """
